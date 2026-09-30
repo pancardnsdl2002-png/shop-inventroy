@@ -1,125 +1,257 @@
-import sqlite3
-import pandas as pd
 import streamlit as st
 
-# পেজ কনফিগারেশন
 st.set_page_config(
-    page_title="রাধাকৃষ্ণ কমিউনিকেশন - ক্যাটালগ",
+    page_title="Radhakrishna Communication",
     page_icon="📱",
-    layout="wide",
+    layout="wide"
 )
 
+# Sample product catalogue
+products = [
+    {
+        "id": 1,
+        "name": "Smartphone",
+        "category": "Mobile",
+        "price": 12999,
+        "description": "A stylish smartphone with a high-quality display and powerful performance.",
+        "image": "https://placehold.co/600x400?text=Smartphone",
+        "gallery": [
+            "https://placehold.co/600x400?text=Smartphone+Front",
+            "https://placehold.co/600x400?text=Smartphone+Back",
+            "https://placehold.co/600x400?text=Smartphone+Side"
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Wireless Headphones",
+        "category": "Headphones",
+        "price": 1499,
+        "description": "Enjoy wireless audio with comfortable ear cushions and clear sound.",
+        "image": "https://placehold.co/600x400?text=Headphones",
+        "gallery": [
+            "https://placehold.co/600x400?text=Headphones+Front",
+            "https://placehold.co/600x400?text=Headphones+Side",
+            "https://placehold.co/600x400?text=Headphones+Case"
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Mobile Charger",
+        "category": "Accessories",
+        "price": 499,
+        "description": "A compact mobile charger for everyday use.",
+        "image": "https://placehold.co/600x400?text=Mobile+Charger",
+        "gallery": [
+            "https://placehold.co/600x400?text=Charger+Front",
+            "https://placehold.co/600x400?text=Charger+Side"
+        ]
+    },
+    {
+        "id": 4,
+        "name": "Bluetooth Speaker",
+        "category": "Electronics",
+        "price": 1999,
+        "description": "A portable Bluetooth speaker for music at home or outdoors.",
+        "image": "https://placehold.co/600x400?text=Bluetooth+Speaker",
+        "gallery": [
+            "https://placehold.co/600x400?text=Speaker+Front",
+            "https://placehold.co/600x400?text=Speaker+Back"
+        ]
+    }
+]
 
-# ডেটাবেস ইনিশিয়ালাইজেশন ফাংশন
-def init_db():
-  conn = sqlite3.connect("inventory.db")
-  cursor = conn.cursor()
-  cursor.execute("""
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            price REAL NOT NULL,
-            stock INTEGER NOT NULL,
-            description TEXT
-        )
-    """)
-  conn.commit()
-  conn.close()
+# Custom styling
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(135deg, #f5f7ff, #eefaff);
+}
+.main-title {
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+    color: #153e75;
+    padding: 15px;
+}
+.product-card {
+    background: white;
+    padding: 12px;
+    border-radius: 15px;
+    border: 1px solid #dce5f5;
+    margin-bottom: 10px;
+}
+.price {
+    color: #078447;
+    font-size: 23px;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
 
+# Header
+st.markdown(
+    '<div class="main-title">'
+    '📱 Radhakrishna Communication & Electronics'
+    '</div>',
+    unsafe_allow_html=True
+)
 
-# নতুন প্রোডাক্ট যোগ করার ফাংশন
-def add_product(name, category, price, stock, description):
-  conn = sqlite3.connect("inventory.db")
-  cursor = conn.cursor()
-  cursor.execute(
-      """
-        INSERT INTO products (name, category, price, stock, description)
-        VALUES (?, ?, ?, ?, ?)
-    """,
-      (name, category, price, stock, description),
-  )
-  conn.commit()
-  conn.close()
+st.caption("Explore our products, prices and product details.")
 
+# Search and category filter
+search = st.text_input(
+    "🔍 Search Products",
+    placeholder="Enter product name..."
+)
 
-# প্রোডাক্ট খোঁজার ফাংশন
-def fetch_products(search_term=""):
-  conn = sqlite3.connect("inventory.db")
-  if search_term:
-    query = """
-            SELECT name, category, price, stock, description 
-            FROM products 
-            WHERE name LIKE ? OR category LIKE ? OR description LIKE ?
-        """
-    param = f"%{search_term}%"
-    df = pd.read_sql_query(query, conn, params=(param, param, param))
-  else:
-    query = """
-            SELECT name, category, price, stock, description 
-            FROM products
-        """
-    df = pd.read_sql_query(query, conn)
-  conn.close()
-  return df
+categories = ["All Categories"] + sorted(
+    {p["category"] for p in products}
+)
 
+category = st.selectbox(
+    "Select Category",
+    categories
+)
 
-# ডেটাবেস টেবিল তৈরি
-init_db()
-
-# --- সাইডবার: অ্যাডমিন প্যানেল ---
-st.sidebar.header("🔐 অ্যাডমিন প্যানেল")
-admin_password = st.sidebar.text_input("অ্যাডমিন পাসওয়ার্ড", type="password")
-
-# ডেমো পাসওয়ার্ড: admin123 (প্রয়োজনে পরিবর্তন করে নিন)
-if admin_password == "admin123":
-  st.sidebar.success("লগইন সফল!")
-  st.sidebar.subheader("নতুন প্রোডাক্ট যোগ করুন")
-
-  with st.sidebar.form("add_product_form", clear_on_submit=True):
-    p_name = st.text_input("প্রোডাক্টের নাম *")
-    p_category = st.selectbox(
-        "ক্যাটাগরি", ["মোবাইল", "অ্যাক্সেসরিজ", "ইলেকট্রনিক্স", "অন্যান্য"]
+# Filter products
+filtered_products = [
+    p for p in products
+    if search.lower() in p["name"].lower()
+    and (
+        category == "All Categories"
+        or p["category"] == category
     )
-    p_price = st.number_input("দাম (টাকা) *", min_value=0.0, step=10.0)
-    p_stock = st.number_input("স্টক পরিমাণ *", min_value=0, step=1)
-    p_desc = st.text_area("বিবরণ / কিওয়ার্ড")
+]
 
-    submitted = st.form_submit_button("যোগ করুন")
-    if submitted:
-      if p_name and p_price:
-        add_product(p_name, p_category, p_price, p_stock, p_desc)
-        st.sidebar.success(f"'{p_name}' সফলভাবে সংরক্ষিত হয়েছে!")
-        st.rerun()
-      else:
-        st.sidebar.error("নাম এবং দাম দেওয়া বাধ্যতামূলক!")
-elif admin_password:
-  st.sidebar.error("ভুল পাসওয়ার্ড!")
+st.divider()
 
-# --- মূল পেজ: ক্যাটালগ ও সার্চ ---
-st.title("📦 রাধাকৃষ্ণ কমিউনিকেশন এন্ড ইলেকট্রনিক্স")
-st.write("আমাদের সমস্ত পণ্য ও স্টক ক্যাটালগ দেখুন:")
+# Product details page
+selected_id = st.session_state.get("selected_product")
 
-# সার্চ বার
-search_query = st.text_input(
-    "🔍 সার্চ করুন (নাম, ক্যাটাগরি বা কিওয়ার্ড দিয়ে):", ""
-)
+if selected_id is not None:
+    selected = next(
+        (p for p in products if p["id"] == selected_id),
+        None
+    )
 
-# ডেটা ফেচ ও ডিসপ্লে
-df_products = fetch_products(search_query)
+    if selected:
+        if st.button("← Back to Catalogue"):
+            del st.session_state["selected_product"]
+            st.rerun()
 
-if not df_products.empty:
-  # টেবিল কলামগুলোর বাংলা নাম দেওয়া
-  df_display = df_products.rename(
-      columns={
-          "name": "প্রোডাক্টের নাম",
-          "category": "ক্যাটাগরি",
-          "price": "দাম (টাকা)",
-          "stock": "স্টক",
-          "description": "বিবরণ",
-      }
-  )
+        st.header(selected["name"])
 
-  st.dataframe(df_display, use_container_width=True)
+        left, right = st.columns([1, 1])
+
+        with left:
+            st.image(
+                selected["image"],
+                use_container_width=True
+            )
+
+        with right:
+            st.subheader(selected["name"])
+            st.write("Category:", selected["category"])
+
+            st.markdown(
+                f'<p class="price">₹{selected["price"]:,.2f}</p>',
+                unsafe_allow_html=True
+            )
+
+            st.write(selected["description"])
+
+        st.subheader("Product Gallery")
+
+        gallery = selected["gallery"]
+
+        gallery_columns = st.columns(
+            min(len(gallery), 3)
+        )
+
+        for i, image in enumerate(gallery):
+            with gallery_columns[i % len(gallery_columns)]:
+                st.image(
+                    image,
+                    use_container_width=True
+                )
+
+        # Related products
+        related = [
+            p for p in products
+            if p["category"] == selected["category"]
+            and p["id"] != selected["id"]
+        ]
+
+        if related:
+            st.subheader("Related Products")
+
+            cols = st.columns(
+                min(len(related), 3)
+            )
+
+            for i, product in enumerate(related):
+                with cols[i % len(cols)]:
+                    st.image(
+                        product["image"],
+                        use_container_width=True
+                    )
+                    st.write(product["name"])
+                    st.write(f"₹{product['price']:,.2f}")
+
+                    if st.button(
+                        "View Product",
+                        key=f"related_{product['id']}"
+                    ):
+                        st.session_state["selected_product"] = (
+                            product["id"]
+                        )
+                        st.rerun()
+
+    st.stop()
+
+# Main catalogue
+st.subheader("Our Product Catalogue")
+
+if not filtered_products:
+    st.info("No products found.")
 else:
-  st.info("কোনো প্রোডাক্ট পাওয়া যায়নি。")
+    columns = st.columns(4)
+
+    for index, product in enumerate(filtered_products):
+        with columns[index % 4]:
+            st.markdown(
+                '<div class="product-card">',
+                unsafe_allow_html=True
+            )
+
+            st.image(
+                product["image"],
+                use_container_width=True
+            )
+
+            st.markdown(
+                f"**{product['name']}**"
+            )
+
+            st.markdown(
+                f'<p class="price">₹{product["price"]:,.2f}</p>',
+                unsafe_allow_html=True
+            )
+
+            if st.button(
+                "View Details",
+                key=f"product_{product['id']}",
+                use_container_width=True
+            ):
+                st.session_state["selected_product"] = (
+                    product["id"]
+                )
+                st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+st.divider()
+
+st.caption(
+    "© Radhakrishna Communication & Electronics"
+)
